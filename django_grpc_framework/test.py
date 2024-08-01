@@ -111,6 +111,11 @@ class FakeServer:
         _validate_generic_rpc_handlers(generic_rpc_handlers)
         self.rpc_method_handlers.update(generic_rpc_handlers[0]._method_handlers)
 
+    def add_registered_method_handlers(self, service_name, method_handlers):
+        # do nothing; see https://github.com/grpc/grpc/issues/36683
+        # and https://github.com/grpc/grpc/pull/36696
+        pass
+
     def _find_method_handler(self, method_full_rpc_name):
         return self.rpc_method_handlers[method_full_rpc_name]
 
