@@ -110,3 +110,9 @@ You can now run a gRPC client to access the service:
         stub = demo_pb2_grpc.UserControllerStub(channel)
         for user in stub.List(demo_pb2.UserListRequest()):
             print(user, end='')
+
+Note: It is also possible to run server supporting asynchronous servicers
+
+.. code-block:: bash
+
+    $ python manage.py grpcrunserver --async
