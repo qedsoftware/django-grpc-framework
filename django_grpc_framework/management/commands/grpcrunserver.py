@@ -4,6 +4,7 @@ from datetime import datetime
 import sys
 import errno
 import os
+import asyncio
 
 import grpc
 from django.utils import autoreload
@@ -35,11 +36,19 @@ class Command(BaseCommand):
                 'the auto-reloader and run checks.'
             )
         )
+        parser.add_argument(
+            '--async', action='store_true', dest='async_mode',
+            help=(
+                'Run the server in async mode. Uses grpc.aio.server, '
+                'instead of grpc.server'
+            )
+        )
 
     def handle(self, *args, **options):
         self.address = options['address']
         self.development_mode = options['development_mode']
         self.max_workers = options['max_workers']
+        self.async_mode = options['async_mode']
         self.run(**options)
 
     def run(self, **options):
@@ -58,6 +67,23 @@ class Command(BaseCommand):
             self._serve()
 
     def _serve(self):
+        _serve_method = self._async_serve if self.async_mode else self._sync_serve
+        _serve_method()
+
+    def _async_serve(self):
+        asyncio.run(self._aioserve())
+
+    async def _aioserve(self):
+        server = grpc.aio.server(futures.ThreadPoolExecutor(max_workers=self.max_workers),
+                                 interceptors=grpc_settings.SERVER_INTERCEPTORS,
+                                 options=grpc_settings.SERVER_OPTIONS,
+                                 compression=grpc_settings.COMPRESSION)
+        grpc_settings.ROOT_HANDLERS_HOOK(server)
+        server.add_insecure_port(self.address)
+        await server.start()
+        await server.wait_for_termination()
+
+    def _sync_serve(self):
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=self.max_workers),
                              interceptors=grpc_settings.SERVER_INTERCEPTORS,
                              options=grpc_settings.SERVER_OPTIONS,
